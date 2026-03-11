@@ -39,6 +39,7 @@ const state = {
 
 function boot() {
   bindInput();
+  bindTouchControls();
   createClouds();
   loadLevel(0, true);
   requestAnimationFrame(frame);
@@ -739,6 +740,42 @@ function bindInput() {
     if (event.code === "ArrowRight") input.right = false;
     if (event.code === "ShiftLeft" || event.code === "ShiftRight") input.run = false;
   });
+}
+
+function bindTouchControls() {
+  const buttons = document.querySelectorAll("[data-touch]");
+  for (const button of buttons) {
+    const action = button.dataset.touch;
+    const holdAction = action === "left" || action === "right";
+
+    const activate = (event) => {
+      event.preventDefault();
+      audio.unlock();
+      button.classList.add("is-active");
+      if (action === "left") input.left = true;
+      if (action === "right") input.right = true;
+      if (action === "jump") input.jumpPressed = true;
+      if (action === "fire") input.shootPressed = true;
+    };
+
+    const deactivate = (event) => {
+      event.preventDefault();
+      button.classList.remove("is-active");
+      if (action === "left") input.left = false;
+      if (action === "right") input.right = false;
+      if (!holdAction) {
+        if (action === "jump") input.jumpPressed = false;
+        if (action === "fire") input.shootPressed = false;
+      }
+    };
+
+    button.addEventListener("pointerdown", activate);
+    button.addEventListener("pointerup", deactivate);
+    button.addEventListener("pointercancel", deactivate);
+    button.addEventListener("pointerleave", (event) => {
+      if (holdAction) deactivate(event);
+    });
+  }
 }
 
 function resetPressed() {

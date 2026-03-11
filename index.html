@@ -8,11 +8,24 @@
   </head>
   <body>
     <div class="game-shell">
-      <canvas id="gameCanvas" width="1280" height="720" aria-label="Metro Mayhem platform game"></canvas>
+      <div class="game-frame">
+        <canvas id="gameCanvas" width="1280" height="720" aria-label="Metro Mayhem platform game"></canvas>
+        <div class="touch-controls" aria-label="Touch controls">
+          <div class="touch-cluster touch-cluster-left">
+            <button class="touch-button" data-touch="left" aria-label="Move left">Left</button>
+            <button class="touch-button" data-touch="right" aria-label="Move right">Right</button>
+          </div>
+          <div class="touch-cluster touch-cluster-right">
+            <button class="touch-button touch-button-action" data-touch="jump" aria-label="Jump">Jump</button>
+            <button class="touch-button touch-button-action" data-touch="fire" aria-label="Fire">Fire</button>
+          </div>
+        </div>
+      </div>
       <div class="controls">
         <span>Move: Left / Right</span>
         <span>Jump: Space</span>
         <span>Shoot: X</span>
+        <span>Mobile: Touch the on-screen buttons</span>
       </div>
     </div>
     <script type="module" src="./main.js"></script>
