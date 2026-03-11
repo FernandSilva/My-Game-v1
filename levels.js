@@ -200,13 +200,30 @@ export const LEVELS = [
   },
 ];
 
+const LEVEL_LENGTH_FACTORS = [0.5, 0.8, 0.9, 1, 1, 1];
+
 export function cloneLevel(index) {
   const level = LEVELS[index];
+  const lengthFactor = LEVEL_LENGTH_FACTORS[index] ?? 1;
+  const width = Math.floor(level.width * lengthFactor);
+  const goalX = Math.max(level.spawn.x + 800, width - 320);
   return {
     ...level,
-    platforms: level.platforms.map((platform) => ({ ...platform })),
-    enemies: level.enemies.map((enemy) => ({ ...enemy })),
-    civilians: level.civilians.map((civilian) => ({ ...civilian })),
-    collectibles: level.collectibles.map((coin) => ({ ...coin })),
+    width,
+    goal: {
+      ...level.goal,
+      x: goalX,
+    },
+    platforms: level.platforms
+      .filter((platform) => platform.x < width)
+      .map((platform) => ({
+        ...platform,
+        width: Math.min(platform.width, width - platform.x),
+        max: platform.moving ? Math.min(platform.max, width - platform.width) : platform.max,
+      }))
+      .filter((platform) => platform.width > 0),
+    enemies: level.enemies.filter((enemy) => enemy.x < goalX - 120).map((enemy) => ({ ...enemy })),
+    civilians: level.civilians.filter((civilian) => civilian.x < goalX - 180).map((civilian) => ({ ...civilian })),
+    collectibles: level.collectibles.filter((coin) => coin.x < goalX - 80).map((coin) => ({ ...coin })),
   };
 }
