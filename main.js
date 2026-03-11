@@ -3,8 +3,18 @@ import { cloneLevel, LEVELS } from "./levels.js";
 import { FIXED_DT, clamp, rectsOverlap } from "./physics.js";
 import { Player } from "./player.js";
 
+const BASE_WIDTH = 1280;
+const BASE_HEIGHT = 720;
+const FORCE_TOUCH_MODE = new URLSearchParams(window.location.search).has("touch");
+
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+const root = document.documentElement;
+const body = document.body;
+const shell = document.querySelector(".game-shell");
+const frameEl = document.querySelector(".game-frame");
+const dock = document.querySelector(".control-dock");
+const orientationPrompt = document.querySelector(".orientation-prompt");
 
 const input = {
   left: false,
@@ -35,14 +45,80 @@ const state = {
   lastTimestamp: 0,
   accumulator: 0,
   clouds: [],
+  ui: {
+    touchMode: false,
+    showRotatePrompt: false,
+    frameScale: 1,
+    compactHud: false,
+  },
 };
 
 function boot() {
+  canvas.width = BASE_WIDTH;
+  canvas.height = BASE_HEIGHT;
   bindInput();
   bindTouchControls();
+  bindResponsiveLayout();
   createClouds();
   loadLevel(0, true);
   requestAnimationFrame(frame);
+}
+
+function bindResponsiveLayout() {
+  const viewport = window.visualViewport;
+  window.addEventListener("resize", updateResponsiveLayout);
+  window.addEventListener("orientationchange", updateResponsiveLayout);
+  if (viewport) {
+    viewport.addEventListener("resize", updateResponsiveLayout);
+    viewport.addEventListener("scroll", updateResponsiveLayout);
+  }
+  updateResponsiveLayout();
+}
+
+function updateResponsiveLayout() {
+  const viewportWidth = Math.max(320, Math.floor(window.visualViewport?.width ?? window.innerWidth));
+  const viewportHeight = Math.max(320, Math.floor(window.visualViewport?.height ?? window.innerHeight));
+  const touchMode = shouldUseTouchMode();
+  const portrait = viewportHeight > viewportWidth;
+  const rotatePrompt = touchMode && portrait;
+  const shellGap = touchMode ? 8 : 12;
+  const desktopControlsHeight = touchMode ? 0 : 64;
+  const dockHeight = touchMode && !rotatePrompt ? clamp(Math.round(viewportHeight * 0.2), 112, 158) : 0;
+  const availableWidth = Math.max(280, viewportWidth - (touchMode ? 0 : 24));
+  const availableHeight = Math.max(
+    220,
+    viewportHeight - (touchMode ? dockHeight + shellGap : desktopControlsHeight + shellGap + 28)
+  );
+  const scale = Math.min(availableWidth / BASE_WIDTH, availableHeight / BASE_HEIGHT);
+  const frameWidth = Math.floor(BASE_WIDTH * scale);
+  const frameHeight = Math.floor(BASE_HEIGHT * scale);
+
+  state.ui.touchMode = touchMode;
+  state.ui.showRotatePrompt = rotatePrompt;
+  state.ui.frameScale = scale;
+  state.ui.compactHud = touchMode && scale < 0.72;
+
+  body.classList.toggle("touch-mode", touchMode);
+  body.classList.toggle("show-rotate", rotatePrompt);
+  root.style.setProperty("--app-height", `${viewportHeight}px`);
+  root.style.setProperty("--shell-width", `${frameWidth}px`);
+  root.style.setProperty("--frame-width", `${frameWidth}px`);
+  root.style.setProperty("--frame-height", `${frameHeight}px`);
+  root.style.setProperty("--dock-height", `${dockHeight}px`);
+
+  shell.dataset.mode = touchMode ? "touch" : "desktop";
+  frameEl.style.width = `${frameWidth}px`;
+  frameEl.style.height = `${frameHeight}px`;
+  dock.hidden = !touchMode || rotatePrompt;
+  orientationPrompt.hidden = !rotatePrompt;
+}
+
+function shouldUseTouchMode() {
+  return (
+    FORCE_TOUCH_MODE ||
+    window.matchMedia("(pointer: coarse)").matches ||
+    navigator.maxTouchPoints > 0
+  );
 }
 
 function loadLevel(index, freshStart = false) {
@@ -540,32 +616,41 @@ function drawParticle(particle, cameraX) {
 }
 
 function drawHud() {
+  const hudWidth = state.ui.compactHud ? 290 : 330;
+  const hudHeight = state.ui.compactHud ? 76 : 88;
+  const titleSize = state.ui.compactHud ? 17 : 20;
+  const bodySize = state.ui.compactHud ? 14 : 16;
   ctx.fillStyle = "rgba(12, 18, 34, 0.76)";
-  ctx.fillRect(18, 18, 330, 88);
+  ctx.fillRect(18, 18, hudWidth, hudHeight);
   ctx.strokeStyle = "rgba(255,255,255,0.18)";
-  ctx.strokeRect(18, 18, 330, 88);
+  ctx.strokeRect(18, 18, hudWidth, hudHeight);
   ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 20px Trebuchet MS";
-  ctx.fillText("METRO MAYHEM", 34, 48);
-  ctx.font = "16px Trebuchet MS";
-  ctx.fillText(`Level ${state.levelIndex + 1}: ${state.level.name}`, 34, 74);
-  ctx.fillText(`Score ${state.score}`, 34, 96);
-  ctx.fillText(`Lives ${state.lives}`, 220, 96);
+  ctx.font = `bold ${titleSize}px Trebuchet MS`;
+  ctx.fillText("METRO MAYHEM", 34, state.ui.compactHud ? 44 : 48);
+  ctx.font = `${bodySize}px Trebuchet MS`;
+  ctx.fillText(`Level ${state.levelIndex + 1}: ${state.level.name}`, 34, state.ui.compactHud ? 66 : 74);
+  ctx.fillText(`Score ${state.score}`, 34, state.ui.compactHud ? 86 : 96);
+  ctx.fillText(`Lives ${state.lives}`, state.ui.compactHud ? 198 : 220, state.ui.compactHud ? 86 : 96);
 }
 
 function drawOverlay() {
   ctx.textAlign = "center";
   if (state.mode === "title") {
-    drawCenteredPanel(
-      "Press Spacebar or X to start",
-      [
-        "Move: Left / Right Arrows",
-        "Jump: Spacebar",
-        "Double Jump: Spacebar Twice",
-        "Fire: X",
-      ],
-      { width: 760, minHeight: 260 }
-    );
+    const title = state.ui.touchMode ? "Tap Jump or Fire to start" : "Press Spacebar or X to start";
+    const lines = state.ui.touchMode
+      ? [
+          "Move: Left / Right buttons",
+          "Jump: Tap Jump",
+          "Double Jump: Tap Jump twice",
+          "Fire: Tap Fire",
+        ]
+      : [
+          "Move: Left / Right Arrows",
+          "Jump: Spacebar",
+          "Double Jump: Spacebar Twice",
+          "Fire: X",
+        ];
+    drawCenteredPanel(title, lines, { width: state.ui.compactHud ? 660 : 760, minHeight: 260 });
   } else if (state.mode === "levelComplete") {
     drawCenteredPanel(state.messageText, `Next stop: ${LEVELS[state.levelIndex + 1]?.name ?? "Victory"}`);
   } else if (state.mode === "gameover") {
@@ -577,22 +662,22 @@ function drawOverlay() {
 }
 
 function drawCenteredPanel(title, subtitle, options = {}) {
-  const maxWidth = options.width ?? 760;
+  const maxWidth = options.width ?? (state.ui.compactHud ? 680 : 760);
   const subtitleLines = Array.isArray(subtitle)
     ? subtitle
-    : wrapText(subtitle, maxWidth - 110, "18px Trebuchet MS");
-  const panelHeight = Math.max(options.minHeight ?? 170, 120 + subtitleLines.length * 34);
-  const panelY = 150;
+    : wrapText(subtitle, maxWidth - 110, `${state.ui.compactHud ? 16 : 18}px Trebuchet MS`);
+  const panelHeight = Math.max(options.minHeight ?? 170, 112 + subtitleLines.length * (state.ui.compactHud ? 30 : 34));
+  const panelY = state.ui.compactHud ? 126 : 150;
   ctx.fillStyle = "rgba(11, 14, 30, 0.78)";
   ctx.fillRect(canvas.width / 2 - maxWidth / 2, panelY, maxWidth, panelHeight);
   ctx.strokeStyle = "rgba(255,255,255,0.2)";
   ctx.strokeRect(canvas.width / 2 - maxWidth / 2, panelY, maxWidth, panelHeight);
   ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 34px Trebuchet MS";
-  ctx.fillText(title, canvas.width / 2, panelY + 55);
-  ctx.font = "18px Trebuchet MS";
+  ctx.font = `bold ${state.ui.compactHud ? 28 : 34}px Trebuchet MS`;
+  ctx.fillText(title, canvas.width / 2, panelY + (state.ui.compactHud ? 48 : 55));
+  ctx.font = `${state.ui.compactHud ? 16 : 18}px Trebuchet MS`;
   subtitleLines.forEach((line, index) => {
-    ctx.fillText(line, canvas.width / 2, panelY + 104 + index * 34);
+    ctx.fillText(line, canvas.width / 2, panelY + (state.ui.compactHud ? 90 : 104) + index * (state.ui.compactHud ? 30 : 34));
   });
 }
 
@@ -740,42 +825,71 @@ function bindInput() {
     if (event.code === "ArrowRight") input.right = false;
     if (event.code === "ShiftLeft" || event.code === "ShiftRight") input.run = false;
   });
+
+  document.addEventListener(
+    "touchmove",
+    (event) => {
+      if (state.ui.touchMode) event.preventDefault();
+    },
+    { passive: false }
+  );
 }
 
 function bindTouchControls() {
   const buttons = document.querySelectorAll("[data-touch]");
+  const pointerActions = new Map();
+
+  function setActionState(action, active) {
+    if (action === "left") input.left = active;
+    if (action === "right") input.right = active;
+    if (action === "jump") input.jumpPressed = active;
+    if (action === "fire") input.shootPressed = active;
+  }
+
+  function releasePointer(pointerId) {
+    const entry = pointerActions.get(pointerId);
+    if (!entry) return;
+    pointerActions.delete(pointerId);
+    entry.button.classList.remove("is-active");
+    setActionState(entry.action, false);
+  }
+
   for (const button of buttons) {
     const action = button.dataset.touch;
-    const holdAction = action === "left" || action === "right";
 
-    const activate = (event) => {
+    button.addEventListener("pointerdown", (event) => {
+      if (!state.ui.touchMode || state.ui.showRotatePrompt) return;
       event.preventDefault();
       audio.unlock();
+      pointerActions.set(event.pointerId, { action, button });
       button.classList.add("is-active");
-      if (action === "left") input.left = true;
-      if (action === "right") input.right = true;
-      if (action === "jump") input.jumpPressed = true;
-      if (action === "fire") input.shootPressed = true;
-    };
+      setActionState(action, true);
+      button.setPointerCapture(event.pointerId);
+    });
 
-    const deactivate = (event) => {
+    button.addEventListener("pointerup", (event) => {
       event.preventDefault();
-      button.classList.remove("is-active");
-      if (action === "left") input.left = false;
-      if (action === "right") input.right = false;
-      if (!holdAction) {
-        if (action === "jump") input.jumpPressed = false;
-        if (action === "fire") input.shootPressed = false;
-      }
-    };
+      releasePointer(event.pointerId);
+    });
 
-    button.addEventListener("pointerdown", activate);
-    button.addEventListener("pointerup", deactivate);
-    button.addEventListener("pointercancel", deactivate);
-    button.addEventListener("pointerleave", (event) => {
-      if (holdAction) deactivate(event);
+    button.addEventListener("pointercancel", (event) => {
+      event.preventDefault();
+      releasePointer(event.pointerId);
+    });
+
+    button.addEventListener("lostpointercapture", (event) => {
+      releasePointer(event.pointerId);
     });
   }
+
+  window.addEventListener("blur", () => {
+    for (const pointerId of pointerActions.keys()) releasePointer(pointerId);
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      for (const pointerId of pointerActions.keys()) releasePointer(pointerId);
+    }
+  });
 }
 
 function resetPressed() {

@@ -2,30 +2,54 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <title>Metro Mayhem</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <div class="game-shell">
-      <div class="game-frame">
-        <canvas id="gameCanvas" width="1280" height="720" aria-label="Metro Mayhem platform game"></canvas>
-        <div class="touch-controls" aria-label="Touch controls">
-          <div class="touch-cluster touch-cluster-left">
-            <button class="touch-button" data-touch="left" aria-label="Move left">Left</button>
-            <button class="touch-button" data-touch="right" aria-label="Move right">Right</button>
-          </div>
-          <div class="touch-cluster touch-cluster-right">
-            <button class="touch-button touch-button-action" data-touch="jump" aria-label="Jump">Jump</button>
-            <button class="touch-button touch-button-action" data-touch="fire" aria-label="Fire">Fire</button>
+      <div class="game-stage">
+        <div class="game-frame">
+          <canvas id="gameCanvas" width="1280" height="720" aria-label="Metro Mayhem platform game"></canvas>
+          <div class="orientation-prompt" aria-live="polite">
+            <div class="orientation-card">
+              <div class="orientation-icon" aria-hidden="true"></div>
+              <h1>Rotate for Best Play</h1>
+              <p>Metro Mayhem works best in landscape on phones. Turn your device sideways to play.</p>
+            </div>
           </div>
         </div>
       </div>
-      <div class="controls">
+      <div class="controls" aria-label="Desktop controls">
         <span>Move: Left / Right</span>
         <span>Jump: Space</span>
         <span>Shoot: X</span>
-        <span>Mobile: Touch the on-screen buttons</span>
+        <span>Run: Shift</span>
+      </div>
+      <div class="control-dock" aria-label="Mobile controls">
+        <div class="control-dock-header">
+          <span class="control-label">Touch Controls</span>
+          <span class="control-hint">Move + Jump or Fire with both thumbs</span>
+        </div>
+        <div class="touch-controls">
+          <div class="touch-cluster touch-cluster-left">
+            <button class="touch-button touch-button-direction" data-touch="left" aria-label="Move left">
+              <span aria-hidden="true">&#9664;</span>
+            </button>
+            <button class="touch-button touch-button-direction" data-touch="right" aria-label="Move right">
+              <span aria-hidden="true">&#9654;</span>
+            </button>
+          </div>
+          <div class="touch-cluster touch-cluster-right">
+            <button class="touch-button touch-button-action" data-touch="jump" aria-label="Jump">Jump</button>
+            <button class="touch-button touch-button-action touch-button-fire" data-touch="fire" aria-label="Fire">
+              Fire
+            </button>
+          </div>
+        </div>
       </div>
     </div>
     <script type="module" src="./main.js"></script>

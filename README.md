@@ -19,4 +19,10 @@ Then visit `http://localhost:8000`.
 - `Space`: jump
 - `X`: shoot
 - `Shift`: run faster
-# My-Game-v1
+
+## Mobile
+
+- Landscape is the preferred mobile play mode
+- Use the left thumb buttons to move
+- Tap `Jump` for jump and double-jump
+- Tap `Fire` to shoot
