@@ -14,7 +14,6 @@ const body = document.body;
 const shell = document.querySelector(".game-shell");
 const frameEl = document.querySelector(".game-frame");
 const dock = document.querySelector(".control-dock");
-const orientationPrompt = document.querySelector(".orientation-prompt");
 
 const input = {
   left: false,
@@ -47,7 +46,6 @@ const state = {
   clouds: [],
   ui: {
     touchMode: false,
-    showRotatePrompt: false,
     frameScale: 1,
     compactHud: false,
   },
@@ -79,11 +77,9 @@ function updateResponsiveLayout() {
   const viewportWidth = Math.max(320, Math.floor(window.visualViewport?.width ?? window.innerWidth));
   const viewportHeight = Math.max(320, Math.floor(window.visualViewport?.height ?? window.innerHeight));
   const touchMode = shouldUseTouchMode();
-  const portrait = viewportHeight > viewportWidth;
-  const rotatePrompt = touchMode && portrait;
   const shellGap = touchMode ? 8 : 12;
   const desktopControlsHeight = touchMode ? 0 : 64;
-  const dockHeight = touchMode && !rotatePrompt ? clamp(Math.round(viewportHeight * 0.2), 112, 158) : 0;
+  const dockHeight = touchMode ? clamp(Math.round(viewportHeight * 0.22), 112, 168) : 0;
   const availableWidth = Math.max(280, viewportWidth - (touchMode ? 0 : 24));
   const availableHeight = Math.max(
     220,
@@ -94,12 +90,10 @@ function updateResponsiveLayout() {
   const frameHeight = Math.floor(BASE_HEIGHT * scale);
 
   state.ui.touchMode = touchMode;
-  state.ui.showRotatePrompt = rotatePrompt;
   state.ui.frameScale = scale;
   state.ui.compactHud = touchMode && scale < 0.72;
 
   body.classList.toggle("touch-mode", touchMode);
-  body.classList.toggle("show-rotate", rotatePrompt);
   root.style.setProperty("--app-height", `${viewportHeight}px`);
   root.style.setProperty("--shell-width", `${frameWidth}px`);
   root.style.setProperty("--frame-width", `${frameWidth}px`);
@@ -109,8 +103,7 @@ function updateResponsiveLayout() {
   shell.dataset.mode = touchMode ? "touch" : "desktop";
   frameEl.style.width = `${frameWidth}px`;
   frameEl.style.height = `${frameHeight}px`;
-  dock.hidden = !touchMode || rotatePrompt;
-  orientationPrompt.hidden = !rotatePrompt;
+  dock.hidden = !touchMode;
 }
 
 function shouldUseTouchMode() {
@@ -858,7 +851,7 @@ function bindTouchControls() {
     const action = button.dataset.touch;
 
     button.addEventListener("pointerdown", (event) => {
-      if (!state.ui.touchMode || state.ui.showRotatePrompt) return;
+      if (!state.ui.touchMode) return;
       event.preventDefault();
       audio.unlock();
       pointerActions.set(event.pointerId, { action, button });
